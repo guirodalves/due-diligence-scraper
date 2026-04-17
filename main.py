@@ -58,7 +58,9 @@ def collect(data: dict):
 
     c.save()
 
-    file_url = f"/files/{filename}"
+    BASE_URL = "https://due-diligence-scraper.onrender.com"
+
+    file_url = f"{BASE_URL}/files/{filename}"
 
     return {
         "status": "completed",
