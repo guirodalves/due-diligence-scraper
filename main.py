@@ -4,9 +4,10 @@ import os
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from fastapi.responses import FileResponse
-from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
 from datetime import datetime
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
 import qrcode
 
 
@@ -51,76 +52,69 @@ def collect(data: dict):
     from reportlab.lib import colors
     from datetime import datetime
 
-    c = canvas.Canvas(filepath, pagesize=letter)
+    doc = SimpleDocTemplate(filepath, pagesize=letter)
 
+    styles = getSampleStyleSheet()
+    elements = []
+    
     # =========================
-    # DADOS MOCK (por enquanto)
+    # DADOS
     # =========================
     razao_social = "EMPRESA EXEMPLO LTDA"
     data_consulta = datetime.now().strftime('%d/%m/%Y')
     
-    # simulação de tabela de sanções
-    dados_tabela = [
-        ["Tipo de Sanção", "Início", "Fim", "Órgão"],
-    ]
+    # simulação de várias sanções (para testar múltiplas páginas)
+    dados_tabela = [["Tipo", "Início", "Fim", "Órgão"]]
     
     if has_restrictions:
-        dados_tabela.append(["Suspensão", "01/01/2023", "01/01/2025", "CGU"])
+        for i in range(30):  # força múltiplas páginas
+            dados_tabela.append([f"Sanção {i+1}", "01/01/2023", "01/01/2025", "CGU"])
     else:
         dados_tabela.append(["Nenhuma restrição encontrada", "-", "-", "-"])
     
     # =========================
     # CABEÇALHO
     # =========================
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(100, 750, "CERTIDÃO DE SANÇÕES - CEIS")
+    elements.append(Paragraph("CERTIDÃO DE SANÇÕES", styles["Title"]))
+    elements.append(Spacer(1, 10))
     
-    c.setFont("Helvetica", 10)
-    c.drawString(100, 730, "Cadastro Nacional de Empresas Inidôneas e Suspensas")
-    
-    # linha
-    c.setStrokeColor(colors.grey)
-    c.line(100, 720, 500, 720)
+    elements.append(Paragraph("Cadastro Nacional de Empresas Inidôneas e Suspensas (CEIS)", styles["Normal"]))
+    elements.append(Spacer(1, 20))
     
     # =========================
     # DADOS DA EMPRESA
     # =========================
-    c.setFont("Helvetica", 11)
-    c.drawString(100, 690, f"CNPJ: {cnpj}")
-    c.drawString(100, 670, f"Razão Social: {razao_social}")
-    c.drawString(100, 650, f"Data da consulta: {data_consulta}")
+    elements.append(Paragraph(f"<b>CNPJ:</b> {cnpj}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Razão Social:</b> {razao_social}", styles["Normal"]))
+    elements.append(Paragraph(f"<b>Data da consulta:</b> {data_consulta}", styles["Normal"]))
+    
+    elements.append(Spacer(1, 20))
     
     # =========================
-    # STATUS DESTACADO
+    # STATUS
     # =========================
     if has_restrictions:
-        c.setFillColor(colors.red)
-        status_text = "COM RESTRIÇÕES"
+        status = '<font color="red"><b>STATUS: COM RESTRIÇÕES</b></font>'
     else:
-        c.setFillColor(colors.green)
-        status_text = "SEM RESTRIÇÕES"
+        status = '<font color="green"><b>STATUS: SEM RESTRIÇÕES</b></font>'
     
-    c.rect(100, 600, 300, 25, fill=1)
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(110, 607, f"STATUS: {status_text}")
-    
-    # reset cor
-    c.setFillColor(colors.black)
+    elements.append(Paragraph(status, styles["Heading2"]))
+    elements.append(Spacer(1, 20))
     
     # =========================
     # TABELA
     # =========================
-    table = Table(dados_tabela, colWidths=[120, 80, 80, 120])
+    table = Table(dados_tabela, repeatRows=1)
     
     table.setStyle(TableStyle([
         ("BACKGROUND", (0,0), (-1,0), colors.grey),
         ("TEXTCOLOR", (0,0), (-1,0), colors.white),
-        ("GRID", (0,0), (-1,-1), 1, colors.black),
+        ("GRID", (0,0), (-1,-1), 0.5, colors.black),
+        ("FONTSIZE", (0,0), (-1,-1), 8),
     ]))
     
-    table.wrapOn(c, 100, 500)
-    table.drawOn(c, 100, 500)
+    elements.append(table)
+    elements.append(Spacer(1, 30))
     
     # =========================
     # QR CODE
@@ -131,16 +125,22 @@ def collect(data: dict):
     qr_path = os.path.join(FILES_DIR, f"qr_{filename}.png")
     qr.save(qr_path)
     
-    c.drawImage(qr_path, 400, 600, width=100, height=100)
+    elements.append(Image(qr_path, width=100, height=100))
+    elements.append(Spacer(1, 20))
     
     # =========================
     # RODAPÉ
     # =========================
-    c.setFont("Helvetica-Oblique", 8)
-    c.drawString(100, 100, "Documento gerado automaticamente para fins de due diligence.")
-    c.drawString(100, 85, "Este documento não substitui consulta oficial.")
+    elements.append(Paragraph(
+        "Este documento foi gerado automaticamente para fins de due diligence. "
+        "Não substitui consulta oficial nos órgãos competentes.",
+        styles["Normal"]
+    ))
     
-    c.save()
+    # =========================
+    # BUILD PDF
+    # =========================
+    doc.build(elements)
     
     BASE_URL = "https://due-diligence-scraper.onrender.com"
 
