@@ -36,31 +36,54 @@ def collect(data: dict):
     has_restrictions = ultimo_digito % 2 != 0
 
     # nome do arquivo
-    filename = f"CEIS_{cnpj}.pdf"
+    from datetime import datetime
+
+    data_hoje = datetime.now().strftime("%Y%m%d")
+    filename = f"{cnpj}_CEIS_CERTIDAO_{data_hoje}.pdf"
     filepath = os.path.join(FILES_DIR, filename)
 
     # gerar PDF
+    from reportlab.lib import colors
+    from datetime import datetime
+
     c = canvas.Canvas(filepath, pagesize=letter)
 
-    c.setFont("Helvetica", 14)
-    c.drawString(100, 750, "CERTIDÃO CEIS")
+    # Título
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(100, 750, "CERTIDÃO NEGATIVA DE SANÇÕES")
+    
+    # Linha
+    c.setStrokeColor(colors.grey)
+    c.line(100, 740, 500, 740)
 
-    c.setFont("Helvetica", 12)
+    # Informações
+    c.setFont("Helvetica", 11)
     c.drawString(100, 700, f"CNPJ: {cnpj}")
-    c.drawString(100, 680, f"Data da consulta: {time.strftime('%d/%m/%Y')}")
+    c.drawString(100, 680, f"Data da consulta: {datetime.now().strftime('%d/%m/%Y')}")
+
+    # Status
+    c.setFont("Helvetica-Bold", 12)
 
     if has_restrictions:
-        c.setFillColorRGB(1, 0, 0)
-        c.drawString(100, 640, "RESULTADO: COM RESTRIÇÕES")
+        c.setFillColor(colors.red)
+        c.drawString(100, 640, "STATUS: COM RESTRIÇÕES")
     else:
-        c.setFillColorRGB(0, 0.5, 0)
-        c.drawString(100, 640, "RESULTADO: SEM RESTRIÇÕES")
-
-    c.setFillColorRGB(0, 0, 0)
-    c.drawString(100, 600, "Fonte: Cadastro Nacional de Empresas Inidôneas e Suspensas (CEIS)")
-
+        c.setFillColor(colors.green)
+        c.drawString(100, 640, "STATUS: SEM RESTRIÇÕES")
+    
+    # Reset cor
+    c.setFillColor(colors.black)
+    
+    # Descrição
+    c.setFont("Helvetica", 10)
+    c.drawString(100, 600, "Consulta realizada no CEIS (Cadastro Nacional de Empresas Inidôneas e Suspensas).")
+    
+    # Rodapé
+    c.setFont("Helvetica-Oblique", 8)
+    c.drawString(100, 100, "Documento gerado automaticamente para fins de due diligence.")
+    
     c.save()
-
+    
     BASE_URL = "https://due-diligence-scraper.onrender.com"
 
     file_url = f"{BASE_URL}/files/{filename}"
