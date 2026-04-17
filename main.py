@@ -15,7 +15,7 @@ FILES_DIR = "files"
 os.makedirs(FILES_DIR, exist_ok=True)
 
 BASE_URL = "https://due-diligence-scraper.onrender.com"
-SCRAPER_URL = "https://duedilligence-scraper.railway.app/collect"
+SCRAPER_URL = "https://duediligence-scraper-service-production.up.railway.app/collect"
 
 
 @app.get("/healthz")
