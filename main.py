@@ -141,9 +141,13 @@ def collect(data: dict):
     doc.build(elements, onFirstPage=draw_header_footer, onLaterPages=draw_header_footer)
 
     return {
-        "status": "completed",
-        "file_url": file_url,
-        "metadata": {
-            "has_restrictions": has_restrictions
-        }
+    "status": "completed",
+    "file_url": file_url,
+    "metadata": {
+        "tipo": "CEIS",
+        "cnpj": cnpj,
+        "has_restrictions": has_restrictions,
+        "data_emissao": datetime.now().isoformat()
+    }
+}
     }
