@@ -59,7 +59,10 @@ def collect(data: dict):
     has_restrictions = False
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage"]
+        )
         page = browser.new_page()
 
         page.goto("https://certidoes.cgu.gov.br/")
@@ -67,14 +70,14 @@ def collect(data: dict):
 
         # ✅ selecionar Ente Privado
         page.wait_for_selector('text=Ente Privado')
-        page.click('text=Ente Privado')
+        page.locator("text=Ente Privado").first.click()
         page.wait_for_timeout(1000)
 
         # preencher CNPJ
         page.fill('input[type="text"]', cnpj)
         page.keyboard.press("Enter")
 
-        page.wait_for_timeout(5000)
+        page.wait_for_timeout(8000)
 
         rows = page.query_selector_all("table tbody tr")
 
