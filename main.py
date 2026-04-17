@@ -23,7 +23,10 @@ def health():
 def collect(data: dict):
     time.sleep(2)
 
-    cnpj = data.get("cnpj", "")
+    cnpj_raw = data.get("cnpj", "")
+
+    # remove tudo que não é número
+    cnpj = "".join(filter(str.isdigit, cnpj_raw))
 
     try:
         ultimo_digito = int(cnpj[-1])
