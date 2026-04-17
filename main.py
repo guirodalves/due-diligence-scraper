@@ -4,6 +4,11 @@ import os
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from fastapi.responses import FileResponse
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib import colors
+from datetime import datetime
+import qrcode
+
 
 app = FastAPI()
 
@@ -48,39 +53,92 @@ def collect(data: dict):
 
     c = canvas.Canvas(filepath, pagesize=letter)
 
-    # Título
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(100, 750, "CERTIDÃO NEGATIVA DE SANÇÕES")
+    # =========================
+    # DADOS MOCK (por enquanto)
+    # =========================
+    razao_social = "EMPRESA EXEMPLO LTDA"
+    data_consulta = datetime.now().strftime('%d/%m/%Y')
     
-    # Linha
+    # simulação de tabela de sanções
+    dados_tabela = [
+        ["Tipo de Sanção", "Início", "Fim", "Órgão"],
+    ]
+    
+    if has_restrictions:
+        dados_tabela.append(["Suspensão", "01/01/2023", "01/01/2025", "CGU"])
+    else:
+        dados_tabela.append(["Nenhuma restrição encontrada", "-", "-", "-"])
+    
+    # =========================
+    # CABEÇALHO
+    # =========================
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(100, 750, "CERTIDÃO DE SANÇÕES - CEIS")
+    
+    c.setFont("Helvetica", 10)
+    c.drawString(100, 730, "Cadastro Nacional de Empresas Inidôneas e Suspensas")
+    
+    # linha
     c.setStrokeColor(colors.grey)
-    c.line(100, 740, 500, 740)
-
-    # Informações
+    c.line(100, 720, 500, 720)
+    
+    # =========================
+    # DADOS DA EMPRESA
+    # =========================
     c.setFont("Helvetica", 11)
-    c.drawString(100, 700, f"CNPJ: {cnpj}")
-    c.drawString(100, 680, f"Data da consulta: {datetime.now().strftime('%d/%m/%Y')}")
-
-    # Status
-    c.setFont("Helvetica-Bold", 12)
-
+    c.drawString(100, 690, f"CNPJ: {cnpj}")
+    c.drawString(100, 670, f"Razão Social: {razao_social}")
+    c.drawString(100, 650, f"Data da consulta: {data_consulta}")
+    
+    # =========================
+    # STATUS DESTACADO
+    # =========================
     if has_restrictions:
         c.setFillColor(colors.red)
-        c.drawString(100, 640, "STATUS: COM RESTRIÇÕES")
+        status_text = "COM RESTRIÇÕES"
     else:
         c.setFillColor(colors.green)
-        c.drawString(100, 640, "STATUS: SEM RESTRIÇÕES")
+        status_text = "SEM RESTRIÇÕES"
     
-    # Reset cor
+    c.rect(100, 600, 300, 25, fill=1)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(110, 607, f"STATUS: {status_text}")
+    
+    # reset cor
     c.setFillColor(colors.black)
     
-    # Descrição
-    c.setFont("Helvetica", 10)
-    c.drawString(100, 600, "Consulta realizada no CEIS (Cadastro Nacional de Empresas Inidôneas e Suspensas).")
+    # =========================
+    # TABELA
+    # =========================
+    table = Table(dados_tabela, colWidths=[120, 80, 80, 120])
     
-    # Rodapé
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), colors.grey),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("GRID", (0,0), (-1,-1), 1, colors.black),
+    ]))
+    
+    table.wrapOn(c, 100, 500)
+    table.drawOn(c, 100, 500)
+    
+    # =========================
+    # QR CODE
+    # =========================
+    qr_data = f"https://due-diligence-scraper.onrender.com/files/{filename}"
+    
+    qr = qrcode.make(qr_data)
+    qr_path = os.path.join(FILES_DIR, f"qr_{filename}.png")
+    qr.save(qr_path)
+    
+    c.drawImage(qr_path, 400, 600, width=100, height=100)
+    
+    # =========================
+    # RODAPÉ
+    # =========================
     c.setFont("Helvetica-Oblique", 8)
     c.drawString(100, 100, "Documento gerado automaticamente para fins de due diligence.")
+    c.drawString(100, 85, "Este documento não substitui consulta oficial.")
     
     c.save()
     
