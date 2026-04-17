@@ -150,4 +150,3 @@ def collect(data: dict):
         "data_emissao": datetime.now().isoformat()
     }
 }
-    }
